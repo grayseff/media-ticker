@@ -9,6 +9,7 @@
 
 #define MAXLINE 1024
 #define WIDTH 30
+#define OUTFILE "/tmp/current-media"
 
 int main(void)
 {
@@ -50,8 +51,16 @@ next:
 		p += n;
 	}
 	if (width <= WIDTH ) {
-		fputs(buf, stdout);
-		putchar('\n');
+		/*fputs(buf, stdout);
+		putchar('\n');*/
+
+		FILE *out = fopen(OUTFILE, "w");
+		if (out == NULL)
+			return 1;
+		fputs(buf, out);
+		if (fclose(out) != 0)
+			return 1;
+				
 		status = poll(&pfd , 1, -1);
 
 		if (status < 0)
@@ -92,8 +101,17 @@ next:
 
 		memcpy(display, scroll + i, bytes);
 		display[bytes] = '\0';
+		/*
 		fputs(display, stdout);
 		putchar('\n');
+		*/
+
+		FILE *out = fopen(OUTFILE, "w");
+		if (out == NULL)
+			return 1;
+		fputs(display, out);
+		if (fclose(out) != 0)
+			return 1;
 		
 		status = poll(&pfd, 1, 1000);
 		if (status == 0) {
