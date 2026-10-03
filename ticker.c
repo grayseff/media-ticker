@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
+#include <locale.h>
+#include <wchar.h>
 
 
 #define MAXLINE 1024
@@ -9,10 +12,17 @@
 
 int main(void)
 {
+
+	setlocale(LC_CTYPE,"");
+
 	char buf[MAXLINE];
 	size_t len;
 	int status;
 
+	wchar_t wc;
+	mbstate_t state = {0};
+
+	
 	struct pollfd pfd;
 	pfd.fd = STDIN_FILENO;
 	pfd.events = POLLIN;
@@ -26,8 +36,20 @@ next:
 		buf[len - 1] = '\0';
 		len--;
 	}
+	
+	char *p = buf;
+	size_t width = 0;
 
-	if (len <= WIDTH ) {
+	state = (mbstate_t){0};
+
+		
+	while(*p != '\0'){
+		size_t n = mbrtowc(&wc, p, MB_CUR_MAX, &state);
+		int w = wcwidth(wc);
+		width +=w;
+		p += n;
+	}
+	if (width <= WIDTH ) {
 		fputs(buf, stdout);
 		putchar('\n');
 		status = poll(&pfd , 1, -1);
@@ -38,7 +60,7 @@ next:
 		goto next;
 	}
 
-	char display[WIDTH+1];
+	char display[WIDTH * 4 + 1];
 	char scroll[len * 2 + 4];
 	memcpy(scroll, buf, len);
 	scroll[len] = ' ';
@@ -50,14 +72,33 @@ next:
 
 	size_t i = 0;
 	while (1) {
-		memcpy(display, scroll + i, WIDTH);
-		display[WIDTH] = '\0';
+		size_t bytes = 0;
+		size_t cols = 0;
+		size_t n_0 = 0;
+		
+		state = (mbstate_t){0};
+			
+		while (1) {
+			size_t n = mbrtowc(&wc, scroll + i + bytes, MB_CUR_MAX, &state);
+			int w = wcwidth(wc);
+
+			if (cols + w > WIDTH)
+				break;
+			if (bytes == 0)
+				n_0 = n;
+			bytes += n;
+			cols += w;
+		}
+
+		memcpy(display, scroll + i, bytes);
+		display[bytes] = '\0';
 		fputs(display, stdout);
 		putchar('\n');
 		
 		status = poll(&pfd, 1, 1000);
 		if (status == 0) {
-			i++;
+			
+			i += n_0;
 			if (i >= len + 3) {
 				i = 0;
 			}
