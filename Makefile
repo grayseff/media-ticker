@@ -1,12 +1,14 @@
 CC = cproc
 
-ticker: ticker.o
-	$(CC) ticker.o -o ticker
+all: media-ticker notify-ticker
 
-ticker.o: ticker.c
-	$(CC) -c ticker.c
+media-ticker: media-ticker.c
+	$(CC) -o $@ $<
+
+notify-ticker: notify-ticker.c
+	$(CC) -o $@ $<
 
 clean:
-	rm -f ticker ticker.o
+	rm -f media-ticker notify-ticker
 
-.PHONY: clean
+.PHONY: all clean
