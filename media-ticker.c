@@ -18,6 +18,7 @@ int main(void)
 
 	char buf[MAXLINE];
 	size_t len;
+	size_t media_width;
 	int status;
 
 	wchar_t wc;
