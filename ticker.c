@@ -63,8 +63,14 @@ textwidth(const char *p)
 
 	while (*p != '\0') {
 		size_t n = mbrtowc(&wc, p, MB_CUR_MAX, &state);
-		int w = wcwidth(wc);
+		int w;
 
+		if ( n == 0 || n == (size_t)-1 || n == (size_t)-2)
+			break;
+
+		w = wcwidth(wc);
+		if (w < 0)
+			break;
 		width += w;
 		p += n;
 	}
@@ -75,19 +81,25 @@ textwidth(const char *p)
 static int
 notify(char *buf, size_t len)
 {
-	const char header[] = "                          * NOTIFICATION * - ";
+	const char header[] = " * NOTIFICATION * - ";
 	size_t msglen = len - 2;
+	size_t cycle = sizeof(header) - 1 + msglen;
+	size_t width = textwidth(header) + textwidth(buf + 2);
+	size_t padding = cycle < WIDTH ? WIDTH - width : 0;
+	size_t period = cycle + padding + 5;
 	char display[WIDTH * 4 + 1];
-	char scroll[(msglen) * 2 + 91 ];
+	char scroll[2 * period + 1];
 	wchar_t wc;
 	int i = 0;
 	int rotations = 0;
 
-	memcpy(scroll, header, WIDTH);
-	memcpy(scroll + WIDTH, buf + 2, msglen);
-	memcpy(scroll + WIDTH + msglen, header, WIDTH);
-	memcpy(scroll + 90 + msglen, buf + 2, msglen);
-	scroll[ 2 * msglen + 90] = '\0';
+	memcpy(scroll, header, sizeof(header) - 1);
+	memcpy(scroll + sizeof(header) - 1, buf + 2, msglen);
+
+	memset(scroll + cycle, ' ', padding + 5);
+
+	memcpy(scroll + period, scroll, period);
+	scroll[2 * period] = '\0';
 
 	while (rotations < 2) {
 		size_t bytes = 0;
@@ -97,12 +109,15 @@ notify(char *buf, size_t len)
 		mbstate_t state = {0};
 
 		while (1) {
-			int w = wcwidth(wc);
+			int w;
 			size_t n = mbrtowc(&wc, scroll + i + bytes, MB_CUR_MAX, &state);
-
-			if (n == 0){
+			
+			if (n == 0 || n == (size_t)-1 || n==(size_t)-2){
 				break;
 			}
+			w = wcwidth(wc);
+			if (w < 0)
+				break;
 
 			if (cols + w > WIDTH)
 				break;
@@ -128,7 +143,7 @@ notify(char *buf, size_t len)
 		usleep(250000);
 		i += n0;
 
-		if (i >= msglen + WIDTH) {
+		if (i >= period) {
 			i = 0;
 			rotations++;
 		}
@@ -175,15 +190,19 @@ media(const char *msg, size_t width, struct pollfd *pfd)
 		mbstate_t state = {0};
 			
 		while (1) {
-			size_t n = mbrtowc(&wc, scroll + i + bytes, MB_CUR_MAX, &state);
-			int w = wcwidth(wc);
+		int w;
+		size_t n = mbrtowc(&wc, scroll + i + bytes, MB_CUR_MAX, &state);
+		if (n == 0 || n == (size_t)-1 || n==(size_t)-2){
+			break;
+		}
+		w = wcwidth(wc);
+		if (w < 0)
+			break;
 
-			if (n == 0)
-				break;
-			if (cols + w > WIDTH)
-				break;
-			if (bytes == 0)
-				n0 = n;
+		if (cols + w > WIDTH)
+			break;
+		if (bytes == 0)
+			n0 = n;
 
 			bytes += n;
 			cols += w;
