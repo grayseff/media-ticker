@@ -158,7 +158,7 @@ notify(char *buf, size_t len)
 	char display[WIDTH * 4 + 1];
 	char scroll[2 * period + 1];
 	wchar_t wc;
-	int i = 0;
+	size_t i = 0;
 	int rotations = 0;
 
 	memcpy(scroll, header, sizeof(header) - 1);
@@ -272,8 +272,8 @@ media(const char *msg, size_t width, struct pollfd *pfd)
 		if (bytes == 0)
 			n0 = n;
 
-			bytes += n;
-			cols += w;
+		bytes += n;
+		cols += w;
 		}
 
 		memcpy(display, scroll + i, bytes);
