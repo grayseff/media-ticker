@@ -92,6 +92,8 @@ ding(void)
 	enum { RATE = 44100, SAMPLES = RATE / 10 };
 	int16_t pcm[SAMPLES];
 	int fd[2];
+	const char *p;
+	size_t remaining;
 
 	for (int i = 0; i < SAMPLES; i++) {
 		double t = (double)i / RATE;
@@ -102,10 +104,10 @@ ding(void)
 				+ 0.35 * sin(2.0 * M_PI * 1320.0 * t)
 				);
 	}
-	if ( pipe(fd) == -1 )
+	if ( pipe(fd) < 0 )
 		return;
 	pid_t pid = fork();
-	if (pid == -1) {
+	if (pid < 0) {
 		close(fd[0]);
 		close(fd[1]);
 		return;
@@ -114,7 +116,7 @@ ding(void)
 	if (pid == 0) {
 		/* Child: run paplay with the pipe as stdin. */
 		close(fd[1]);
-		if (dup2(fd[0], STDIN_FILENO) == -1)
+		if (dup2(fd[0], STDIN_FILENO) < 0 )
 			_exit(1);
 		close(fd[0]);
 
@@ -129,8 +131,8 @@ ding(void)
 	/* Parent: send the samples to paplay. */
 	close(fd[0]);
 
-	const char *p = (const char *)pcm;
-	size_t remaining = sizeof(pcm);
+	p = (const char *)pcm;
+	remaining = sizeof(pcm);
 
 	while (remaining > 0) {
 		ssize_t n = write(fd[1], p, remaining);
