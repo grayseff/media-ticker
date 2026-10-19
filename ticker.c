@@ -1,5 +1,9 @@
 #include <locale.h>
 #include <poll.h>
+#include <pulse/error.h>
+#include <pulse/simple.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +15,7 @@
 #define OUTFILE "/tmp/current-ticker"
 
 static size_t textwidth(const char *);
+static void ding(void);
 static int notify(char *, size_t);
 static int media(const char *, size_t, struct pollfd *);
 
@@ -38,6 +43,7 @@ main(void)
 		}
 
 		if (buf[0] == 'N') {
+			ding();
 			if (notify(buf, len))
 				return 1;
 		}
@@ -76,6 +82,36 @@ textwidth(const char *p)
 	}
 
 	return width;
+}
+
+static void
+ding(void)
+{
+	enum { RATE = 44100, SAMPLES = RATE / 10 };
+	int16_t pcm[SAMPLES];
+	pa_sample_spec spec = {
+		.format = PA_SAMPLE_S16NE,
+		.rate = RATE,
+		.channels = 1
+	};
+	pa_simple *pa;
+	int error;
+	for (int i = 0; i < SAMPLES; i++) {
+		double t = (double)i / RATE;
+		double volume = 1.0 - (double)i / SAMPLES;
+		pcm[i] = 18000 * volume * (
+				sin(2.0 * M_PI * 880.0 * t)
+				+ 0.35 * sin(2.0 * M_PI * 1320.0 * t)
+				);
+	}
+	pa = pa_simple_new(NULL, "ticker",PA_STREAM_PLAYBACK,
+			NULL, "notification", &spec,
+			NULL, NULL, &error);
+	if ( pa == NULL)
+		return;
+	pa_simple_write(pa, pcm, sizeof(pcm), &error);
+	pa_simple_drain(pa, &error);
+	pa_simple_free(pa);
 }
 
 static int
