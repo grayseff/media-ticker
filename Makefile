@@ -1,10 +1,11 @@
 CC = cc
 CFLAGS = -O2 -Wall -Wextra
-LDLIBS = -lpulse-simple -lpulse -lm
+LDFLAGS = -static
+LDLIBS = -lm
 
 
 ticker: ticker.c
-	$(CC) $(CFLAGS) ticker.c -o ticker $(LDLIBS)
+	$(CC) $(CFLAGS) ticker.c -o ticker $(LDFLAGS) $(LDLIBS)
 
 install: ticker
 	strip ticker

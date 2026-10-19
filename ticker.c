@@ -1,12 +1,13 @@
 #include <locale.h>
 #include <poll.h>
-#include <pulse/error.h>
-#include <pulse/simple.h>
 #include <math.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <wchar.h>
 
@@ -89,29 +90,57 @@ ding(void)
 {
 	enum { RATE = 44100, SAMPLES = RATE / 10 };
 	int16_t pcm[SAMPLES];
-	pa_sample_spec spec = {
-		.format = PA_SAMPLE_S16NE,
-		.rate = RATE,
-		.channels = 1
-	};
-	pa_simple *pa;
-	int error;
+	int fd[2];
+
 	for (int i = 0; i < SAMPLES; i++) {
 		double t = (double)i / RATE;
 		double volume = 1.0 - (double)i / SAMPLES;
-		pcm[i] = 18000 * volume * (
+
+		pcm[i] = 9000 * volume * (
 				sin(2.0 * M_PI * 880.0 * t)
 				+ 0.35 * sin(2.0 * M_PI * 1320.0 * t)
 				);
 	}
-	pa = pa_simple_new(NULL, "ticker",PA_STREAM_PLAYBACK,
-			NULL, "notification", &spec,
-			NULL, NULL, &error);
-	if ( pa == NULL)
+	if ( pipe(fd) == -1 )
 		return;
-	pa_simple_write(pa, pcm, sizeof(pcm), &error);
-	pa_simple_drain(pa, &error);
-	pa_simple_free(pa);
+	pid_t pid = fork();
+	if (pid == -1) {
+		close(fd[0]);
+		close(fd[1]);
+		return;
+	}
+
+	if (pid == 0) {
+		/* Child: run paplay with the pipe as stdin. */
+		close(fd[1]);
+		if (dup2(fd[0], STDIN_FILENO) == -1)
+			_exit(1);
+		close(fd[0]);
+
+		execlp("paplay", "paplay",
+			"--raw",
+			"--rate=44100",
+			"--format=s16ne",
+			"--channels=1",
+			(char *)NULL);
+		_exit(127);
+	}
+	/* Parent: send the samples to paplay. */
+	close(fd[0]);
+
+	const char *p = (const char *)pcm;
+	size_t remaining = sizeof(pcm);
+
+	while (remaining > 0) {
+		ssize_t n = write(fd[1], p, remaining);
+		if (n <= 0)
+			break;
+		p += n;
+		remaining -= n;
+	}
+
+	close(fd[1]);
+	waitpid(pid, NULL, 0);
 }
 
 static int
