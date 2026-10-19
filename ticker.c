@@ -30,6 +30,7 @@ main(void)
 	struct pollfd pfd;
 
 	setlocale(LC_CTYPE, "");
+	signal(SIGPIPE, SIG_IGN);
 	pfd.fd = STDIN_FILENO;
 	pfd.events = POLLIN;
 
