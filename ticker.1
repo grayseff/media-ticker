@@ -1,0 +1,48 @@
+.TH TICKER 1 "October 2026"
+.SH NAME
+ticker \- event-driven scrolling status ticker
+.SH SYNOPSIS
+ticker
+.SH DESCRIPTION
+ticker
+reads newline-delimited events from standard input
+and writes formatted messages to
+/tmp/current-ticker.
+.SH INPUT
+Events may be supplied through a pipe, FIFO, or
+directly from the terminal.
+Each event must be terminated by a newline.
+.PP
+Each input line begins with an event prefix,
+followed by the message text.
+.TP
+M:
+Updates the persistent media message.
+.TP
+N:
+Queues a temporary notification, which is displayed
+twice before returning to the persistent message.
+An audible alert is played using
+paplay(1).
+.PP
+Unrecognised input is ignored.
+Messages exceeding the display width scroll automatically.
+
+.SH FILES
+.TP
+/tmp/current-ticker
+Output file containing the current display text.
+.SH DEPENDENCIES
+Requires
+paplay(1)
+for notification sounds.
+.PP
+Designed for use with
+slstatus(1),
+although any program capable of reading the output
+file may consume its contents.
+.PP
+playerctl
+and
+tiramisu
+are optional event sources.
