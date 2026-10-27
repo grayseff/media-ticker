@@ -2,7 +2,6 @@
 #include <poll.h>
 #include <math.h>
 #include <signal.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +89,7 @@ static void
 ding(void)
 {
 	enum { RATE = 44100, SAMPLES = RATE / 10 };
-	int16_t pcm[SAMPLES];
+	short pcm[SAMPLES];
 	int fd[2];
 	const char *p;
 	size_t remaining;
