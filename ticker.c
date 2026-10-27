@@ -94,8 +94,9 @@ ding(void)
 	int fd[2];
 	const char *p;
 	size_t remaining;
+	int i;
 
-	for (int i = 0; i < SAMPLES; i++) {
+	for (i = 0; i < SAMPLES; i++) {
 		double t = (double)i / RATE;
 		double volume = 1.0 - (double)i / SAMPLES;
 
@@ -120,11 +121,12 @@ ding(void)
 			_exit(1);
 		close(fd[0]);
 
-		execlp("paplay", "paplay",
-			"--raw",
-			"--rate=44100",
-			"--format=s16ne",
-			"--channels=1",
+		execlp("aplay", "aplay",
+			"-q",
+			"-t", "raw",
+			"-f", "S16_LE",
+			"-r", "44100",
+			"-c", "1",
 			(char *)NULL);
 		_exit(127);
 	}
