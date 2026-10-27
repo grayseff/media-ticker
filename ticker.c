@@ -93,6 +93,7 @@ ding(void)
 	int fd[2];
 	const char *p;
 	size_t remaining;
+	pid_t pid;
 	int i;
 
 	for (i = 0; i < SAMPLES; i++) {
@@ -104,9 +105,9 @@ ding(void)
 				+ 0.35 * sin(2.0 * M_PI * 1320.0 * t)
 				);
 	}
-	if ( pipe(fd) < 0 )
+	if (pipe(fd) < 0 )
 		return;
-	pid_t pid = fork();
+	pid = fork();
 	if (pid < 0) {
 		close(fd[0]);
 		close(fd[1]);
@@ -114,7 +115,7 @@ ding(void)
 	}
 
 	if (pid == 0) {
-		/* Child: run paplay with the pipe as stdin. */
+		/* Child: run aplay with the pipe as stdin. */
 		close(fd[1]);
 		if (dup2(fd[0], STDIN_FILENO) < 0 )
 			_exit(1);
@@ -129,7 +130,7 @@ ding(void)
 			(char *)NULL);
 		_exit(127);
 	}
-	/* Parent: send the samples to paplay. */
+	/* Parent: send the samples to aplay. */
 	close(fd[0]);
 
 	p = (const char *)pcm;
@@ -154,7 +155,7 @@ notify(char *buf, size_t len)
 	size_t msglen = len - 2;
 	size_t cycle = sizeof(header) - 1 + msglen;
 	size_t width = textwidth(header) + textwidth(buf + 2);
-	size_t padding = cycle < WIDTH ? WIDTH - width : 0;
+	size_t padding = width < WIDTH ? WIDTH - width : 0;
 	size_t period = cycle + padding + 5;
 	char display[WIDTH * 4 + 1];
 	char scroll[2 * period + 1];
